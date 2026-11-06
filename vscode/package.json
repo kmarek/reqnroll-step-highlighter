@@ -1,15 +1,40 @@
 {
   "name": "reqnroll-step-highlighter",
   "displayName": "Reqnroll Step Highlighter",
-  "description": "Koloruje wykonane stepy w plikach .feature na podstawie wyników zapisanych przez hook Reqnroll.",
-  "version": "0.0.1",
-  "publisher": "local",
+  "description": "Live step results in Reqnroll .feature files: running, passed, failed and skipped steps marked while your C# BDD tests run.",
+  "version": "0.1.0",
+  "publisher": "kmarek",
   "license": "MIT",
+  "icon": "images/icon.png",
+  "galleryBanner": {
+    "color": "#1e293b",
+    "theme": "dark"
+  },
+  "homepage": "https://github.com/kmarek/reqnroll-step-highlighter#readme",
+  "bugs": {
+    "url": "https://github.com/kmarek/reqnroll-step-highlighter/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kmarek/reqnroll-step-highlighter.git",
+    "directory": "vscode"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
   "categories": [
-    "Testing"
+    "Testing",
+    "Visualization"
+  ],
+  "keywords": [
+    "reqnroll",
+    "specflow",
+    "gherkin",
+    "cucumber",
+    "bdd",
+    "feature",
+    "test results",
+    "step"
   ],
   "activationEvents": [
     "workspaceContains:**/*.feature"
@@ -19,28 +44,24 @@
     "commands": [
       {
         "command": "reqnrollSteps.refresh",
-        "title": "Reqnroll: Odśwież wyniki stepów"
+        "title": "Refresh step results",
+        "category": "Reqnroll"
       }
     ]
   },
   "scripts": {
+    "vscode:prepublish": "npm run compile -- --minify",
     "compile": "tsc --noEmit -p ./ && esbuild src/extension.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --outfile=out/extension.js --sourcemap",
     "watch": "esbuild src/extension.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --outfile=out/extension.js --sourcemap --watch",
-    "package": "npx @vscode/vsce package --no-dependencies"
+    "package": "vsce package --no-dependencies"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "@types/vscode": "^1.90.0",
+    "@types/vscode": "~1.90.0",
+    "@vscode/vsce": "^4.1.0",
     "esbuild": "^0.28.2",
-    "typescript": "^5.4.0"
-  },
-  "dependencies": {
+    "typescript": "^5.4.0",
     "@cucumber/gherkin": "^42.0.1",
     "@cucumber/messages": "^34.2.1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/kmarek/reqnroll-step-highlighter.git",
-    "directory": "vscode"
   }
 }
