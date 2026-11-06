@@ -1,0 +1,46 @@
+{
+  "name": "reqnroll-step-highlighter",
+  "displayName": "Reqnroll Step Highlighter",
+  "description": "Koloruje wykonane stepy w plikach .feature na podstawie wyników zapisanych przez hook Reqnroll.",
+  "version": "0.0.1",
+  "publisher": "local",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Testing"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/*.feature"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "reqnrollSteps.refresh",
+        "title": "Reqnroll: Odśwież wyniki stepów"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc --noEmit -p ./ && esbuild src/extension.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --outfile=out/extension.js --sourcemap",
+    "watch": "esbuild src/extension.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --outfile=out/extension.js --sourcemap --watch",
+    "package": "npx @vscode/vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.90.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "@cucumber/gherkin": "^42.0.1",
+    "@cucumber/messages": "^34.2.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kmarek/reqnroll-step-highlighter.git",
+    "directory": "vscode"
+  }
+}

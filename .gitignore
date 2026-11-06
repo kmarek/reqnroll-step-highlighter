@@ -1,0 +1,11 @@
+bin/
+obj/
+node_modules/
+out/
+artifacts/
+TestResults/
+.reqnroll/
+*.vsix
+*.feature.cs
+*.user
+.vs/

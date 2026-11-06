@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Reqnroll ładuje pluginy z plików *.ReqnrollPlugin.dll w katalogu wyjściowym testów. -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>StepHighlighter.ReqnrollPlugin</AssemblyName>
+    <RootNamespace>StepHighlighter.ReqnrollPlugin</RootNamespace>
+
+    <!-- NuGet -->
+    <PackageId>StepHighlighter.ReqnrollPlugin</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Kamil Marek</Authors>
+    <Description>Reqnroll runtime plugin that streams step results (JSON Lines) while tests run, so the Reqnroll Step Highlighter VS Code extension can mark executed steps in .feature files live.</Description>
+    <PackageTags>reqnroll;bdd;gherkin;vscode;test-results;plugin</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/kmarek/reqnroll-step-highlighter</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/kmarek/reqnroll-step-highlighter</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Najniższa wspierana wersja; użytkownik dostaje swoją (wyższą) wersję Reqnroll. -->
+    <PackageReference Include="Reqnroll" Version="3.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>
