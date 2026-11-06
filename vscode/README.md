@@ -9,8 +9,10 @@ right in the `.feature` file, **live while the tests run**. Like IntelliJ does f
 |---|---|
 | ▶ | running now |
 | ✔ | passed |
-| ✘ | failed, pending or undefined (error message on hover) |
-| ○ | skipped (an earlier step failed) |
+| ✘ | failed (error message on hover) |
+| ? | undefined – no matching step definition |
+| … | pending – step definition not implemented yet |
+| ○ | skipped (an earlier step did not pass) |
 
 Hover a step to see its status, duration and error. Scenario Outlines show the worst result across example rows,
 with one line per row in the hover.

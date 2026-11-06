@@ -1,7 +1,7 @@
 # Reqnroll Step Highlighter
 
 Live step results in `.feature` files for [Reqnroll](https://reqnroll.net) (C#) – like IntelliJ does for Cucumber/Java.
-While tests run, each step gets ▶ (running), ✔ (passed), ✘ (failed) or ○ (skipped), with duration and error on hover.
+While tests run, each step gets ▶ (running), ✔ (passed), ✘ (failed), ? (undefined), … (pending) or ○ (skipped), with duration and error on hover.
 
 ![Steps marked live while a Reqnroll scenario runs](vscode/images/demo_passed.gif)
 

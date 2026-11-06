@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+
+- Undefined (`?`) and pending (`…`) steps are marked in yellow instead of as failed (✘),
+  in line with Reqnroll reporting them as inconclusive rather than failed.
+- Hover texts are in English.
+
 ## 0.1.1
 
 - README: demo animation.

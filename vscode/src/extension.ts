@@ -2,11 +2,11 @@ import * as vscode from 'vscode';
 import { parseFeatureText, type ParsedFeature } from './gherkin';
 
 interface StepResult {
-  folderPath?: string;   // katalog .feature względem projektu, np. "Features/Orders" (FeatureInfo.FolderPath)
+  folderPath?: string;   // folder of the .feature file relative to the project, e.g. "Features/Orders" (FeatureInfo.FolderPath)
   feature: string;
   scenario: string;
-  arguments: string;      // wiersz Examples dla Scenario Outline, pusty dla zwykłego scenariusza
-  index: number;          // pozycja stepu: Background feature'a + Background reguły + Scenario
+  arguments: string;      // Examples row of a Scenario Outline, empty for a plain scenario
+  index: number;          // step position: feature Background + Rule Background + Scenario
   stepType: string;
   text: string;
   status: string;         // OK, Skipped, TestError, UndefinedStep, BindingError, StepDefinitionPending, Running
@@ -15,17 +15,20 @@ interface StepResult {
   startedAt?: string;
 }
 
-/** Linia pliku .jsonl zapisywanego przez plugin StepHighlighter.ReqnrollPlugin (format: docs/step-results-format.md). */
+/** One line of the .jsonl file written by the StepHighlighter.ReqnrollPlugin (format: docs/step-results-format.md). */
 interface StepEvent extends Partial<StepResult> {
   event: 'runStarted' | 'scenarioStarted' | 'stepStarted' | 'stepFinished' | 'runFinished';
   at: string;
 }
 
-type Kind = 'passed' | 'failed' | 'skipped' | 'running';
+type Kind = 'passed' | 'failed' | 'undefined' | 'pending' | 'skipped' | 'running';
 interface Verdict { kind: Kind | 'unknown'; label: string; }
 
 const RESULTS_GLOB = '**/.reqnroll/step-results*.jsonl';
-const KINDS: Kind[] = ['passed', 'failed', 'skipped', 'running'];
+/** Worst first: a line shared by several runs (Scenario Outline rows) gets the first kind any run has. */
+const KINDS_BY_SEVERITY: Kind[] = ['failed', 'running', 'undefined', 'pending', 'skipped', 'passed'];
+/** Statuses that do not stop the scenario – any other status means the following steps were not run. */
+const NON_BLOCKING = ['OK', 'Skipped', 'Running'];
 const REFRESH_DEBOUNCE_MS = 150;
 
 let decorations: Record<Kind, vscode.TextEditorDecorationType>;
@@ -35,6 +38,8 @@ export function activate(context: vscode.ExtensionContext): void {
   decorations = {
     passed: createDecoration('✔', 'testing.iconPassed', 'diffEditor.insertedLineBackground'),
     failed: createDecoration('✘', 'testing.iconFailed', 'diffEditor.removedLineBackground'),
+    undefined: createDecoration('?', 'editorWarning.foreground'),
+    pending: createDecoration('…', 'editorWarning.foreground'),
     skipped: createDecoration('○', 'testing.iconSkipped'),
     running: createDecoration('▶', 'testing.iconQueued', 'editor.rangeHighlightBackground'),
   };
@@ -44,7 +49,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.window.visibleTextEditors.filter(isFeature).forEach(decorate);
   };
 
-  // Hook dopisuje linię po każdym stepie – przy szybkich testach to dziesiątki zmian na sekundę.
+  // The plugin appends a line per step event – fast tests produce dozens of changes per second.
   let timer: NodeJS.Timeout | undefined;
   const scheduleRefresh = () => {
     clearTimeout(timer);
@@ -71,7 +76,7 @@ export function activate(context: vscode.ExtensionContext): void {
   void refresh();
 }
 
-export function deactivate(): void { /* dekoracje są w subscriptions */ }
+export function deactivate(): void { /* decorations are disposed via subscriptions */ }
 
 function createDecoration(icon: string, color: string, background?: string): vscode.TextEditorDecorationType {
   return vscode.window.createTextEditorDecorationType({
@@ -95,15 +100,15 @@ async function loadResults(): Promise<StepResult[]> {
       const raw = await vscode.workspace.fs.readFile(file);
       all.push(...parseEvents(Buffer.from(raw).toString('utf8')));
     } catch {
-      // plik usunięty w międzyczasie – kolejna zmiana wywoła odświeżenie
+      // file deleted in the meantime – the next change triggers another refresh
     }
   }
   return all;
 }
 
 /**
- * Składa zdarzenia w stan stepów. Plik zawiera wiele runów: scenarioStarted kasuje poprzedni wynik
- * tego scenariusza, stepStarted bez stepFinished = step w trakcie.
+ * Folds events into step states. The file holds many runs: scenarioStarted drops the previous result
+ * of that scenario; stepStarted without stepFinished = step still running.
  */
 export function parseEvents(text: string): StepResult[] {
   const scenarios = new Map<string, Map<number, StepResult>>();
@@ -113,9 +118,9 @@ export function parseEvents(text: string): StepResult[] {
   for (const line of text.split('\n')) {
     if (!line.trim()) continue;
     let e: StepEvent;
-    try { e = JSON.parse(line); } catch { continue; } // ostatnia linia może być w trakcie zapisu
+    try { e = JSON.parse(line); } catch { continue; } // the last line may still be being written
 
-    // Granica runu: step "w trakcie" z poprzedniego (przerwanego) albo zakończonego runu już nie trwa.
+    // Run boundary: a "running" step from a previous (killed) or finished run is not running any more.
     if (e.event === 'runStarted' || e.event === 'runFinished') { dropRunning(); continue; }
 
     const key = [e.folderPath, e.feature, e.scenario, e.arguments].join('\u0000');
@@ -139,7 +144,7 @@ export function parseEvents(text: string): StepResult[] {
   return [...scenarios.values()].flatMap(steps => [...steps.values()]);
 }
 
-/** undefined = błąd składni (np. w trakcie pisania) – wtedy zostawiamy poprzednie dekoracje. */
+/** undefined = syntax error (e.g. while typing) – the previous decorations are kept. */
 function parseFeature(doc: vscode.TextDocument): ParsedFeature | null | undefined {
   try {
     return parseFeatureText(doc.getText()) ?? null;
@@ -149,9 +154,9 @@ function parseFeature(doc: vscode.TextDocument): ParsedFeature | null | undefine
 }
 
 function decorate(editor: vscode.TextEditor): void {
-  const buckets: Record<Kind, vscode.DecorationOptions[]> = { passed: [], failed: [], skipped: [], running: [] };
+  const buckets = Object.fromEntries(KINDS_BY_SEVERITY.map(k => [k, []])) as unknown as Record<Kind, vscode.DecorationOptions[]>;
   const parsed = parseFeature(editor.document);
-  if (parsed === undefined) return; // VS Code sam przesuwa istniejące dekoracje przy edycji
+  if (parsed === undefined) return; // VS Code moves existing decorations along with edits
 
   if (parsed) {
     const featureResults = results.filter(r =>
@@ -167,11 +172,8 @@ function decorate(editor: vscode.TextEditor): void {
           .filter(v => v.kind !== 'unknown');
         if (verdicts.length === 0) return;
 
-        // najgorszy wynik wygrywa (ważne przy Scenario Outline z wieloma wierszami)
-        const kind: Kind = verdicts.some(v => v.kind === 'failed') ? 'failed'
-          : verdicts.some(v => v.kind === 'running') ? 'running'
-          : verdicts.some(v => v.kind === 'skipped') ? 'skipped'
-          : 'passed';
+        // the worst result wins (matters for Scenario Outlines with many rows)
+        const kind = KINDS_BY_SEVERITY.find(k => verdicts.some(v => v.kind === k))!;
 
         const hover = new vscode.MarkdownString();
         verdicts.forEach(v => { hover.appendText(v.label); hover.appendMarkdown('\n\n'); });
@@ -181,7 +183,7 @@ function decorate(editor: vscode.TextEditor): void {
     }
   }
 
-  for (const kind of KINDS) editor.setDecorations(decorations[kind], buckets[kind]);
+  for (const kind of KINDS_BY_SEVERITY) editor.setDecorations(decorations[kind], buckets[kind]);
 }
 
 function verdictFor(steps: StepResult[], idx: number, args: string): Verdict {
@@ -189,29 +191,38 @@ function verdictFor(steps: StepResult[], idx: number, args: string): Verdict {
   const step = steps.find(s => s.index === idx);
 
   if (!step) {
-    // brak wpisu po wcześniejszym błędzie = step nie został wykonany
-    const failedEarlier = steps.some(s => s.index < idx && !['OK', 'Skipped', 'Running'].includes(s.status));
-    return failedEarlier
-      ? { kind: 'skipped', label: `${prefix}pominięty (wcześniejszy step nie przeszedł)` }
+    // no entry after an earlier problem = the step was not executed
+    const stoppedEarlier = steps.some(s => s.index < idx && !NON_BLOCKING.includes(s.status));
+    return stoppedEarlier
+      ? { kind: 'skipped', label: `${prefix}Skipped (an earlier step did not pass)` }
       : { kind: 'unknown', label: '' };
   }
 
+  const error = step.error ? `: ${step.error}` : '';
   switch (step.status) {
     case 'OK':
-      return { kind: 'passed', label: `${prefix}OK (${step.durationMs} ms)` };
+      return { kind: 'passed', label: `${prefix}Passed (${step.durationMs} ms)` };
     case 'Running':
-      return { kind: 'running', label: `${prefix}w trakcie (od ${formatTime(step.startedAt)})` };
+      return { kind: 'running', label: `${prefix}Running (since ${formatTime(step.startedAt)})` };
     case 'Skipped':
-      return { kind: 'skipped', label: `${prefix}pominięty` };
+      return { kind: 'skipped', label: `${prefix}Skipped` };
+    case 'UndefinedStep':
+      return { kind: 'undefined', label: `${prefix}Undefined – no matching step definition` };
+    case 'StepDefinitionPending':
+      return { kind: 'pending', label: `${prefix}Pending – step definition not implemented yet` };
+    case 'TestError':
+      return { kind: 'failed', label: `${prefix}Failed${error}` };
+    case 'BindingError':
+      return { kind: 'failed', label: `${prefix}Binding error${error}` };
     default:
-      return { kind: 'failed', label: `${prefix}${step.status}${step.error ? `: ${step.error}` : ''}` };
+      return { kind: 'failed', label: `${prefix}${step.status}${error}` };
   }
 }
 
 /**
- * Czy plik leży w katalogu zgłoszonym przez Reqnroll (ścieżka względem projektu testowego).
- * Rozróżnia feature'y o tym samym tytule w różnych katalogach. Pusty folderPath (plik w katalogu
- * projektu) albo jego brak (stary format) – nie da się sprawdzić, więc akceptujemy.
+ * Whether the file lies in the folder reported by Reqnroll (path relative to the test project).
+ * Tells apart features with the same title in different folders. An empty folderPath (file in the
+ * project root) or a missing one (old format) cannot be checked, so it is accepted.
  */
 function isInFolder(fileName: string, folderPath: string | undefined): boolean {
   if (!folderPath) return true;
