@@ -3,6 +3,8 @@
 Live step results in `.feature` files for [Reqnroll](https://reqnroll.net) (C#) – like IntelliJ does for Cucumber/Java.
 While tests run, each step gets ▶ (running), ✔ (passed), ✘ (failed) or ○ (skipped), with duration and error on hover.
 
+![Steps marked live while a Reqnroll scenario runs](vscode/images/demo_passed.gif)
+
 Reqnroll turns each scenario into a single NUnit/xUnit/MSTest test, so test runners and IDEs only know
 scenarios, not steps. This project adds the missing piece in two parts:
 

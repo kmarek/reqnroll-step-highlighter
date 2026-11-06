@@ -3,6 +3,8 @@
 See which **steps** of your [Reqnroll](https://reqnroll.net) scenarios passed, failed or were skipped –
 right in the `.feature` file, **live while the tests run**. Like IntelliJ does for Cucumber/Java.
 
+![Steps marked live while a Reqnroll scenario runs](https://raw.githubusercontent.com/kmarek/reqnroll-step-highlighter/main/vscode/images/demo_passed.gif)
+
 | Mark | Meaning |
 |---|---|
 | ▶ | running now |

@@ -2,7 +2,7 @@
   "name": "reqnroll-step-highlighter",
   "displayName": "Reqnroll Step Highlighter",
   "description": "Live step results in Reqnroll .feature files: running, passed, failed and skipped steps marked while your C# BDD tests run.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "kmarek",
   "license": "MIT",
   "icon": "images/icon.png",

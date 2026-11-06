@@ -5,3 +5,5 @@ tsconfig.json
 package-lock.json
 **/*.map
 *.vsix
+images/*.gif
+images/*.mp4
